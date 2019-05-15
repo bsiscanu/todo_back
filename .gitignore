@@ -1,0 +1,11 @@
+/node_modules
+/.idea
+/public
+/files
+/build
+.env
+
+# OS metadata
+.DS_Store
+Thumbs.db
+

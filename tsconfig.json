@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+  "outDir": "./build",
+    "target": "es2017",
+    "lib": ["es2018"],
+    "module": "commonjs",
+    "allowJs": true,
+    "removeComments": true,
+    "skipLibCheck": true,
+    "experimentalDecorators": true,
+    "sourceMap": true
+  },
+  "compileOnSave": false,
+  "include": [
+    "src"
+  ]
+}

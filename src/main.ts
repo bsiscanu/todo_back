@@ -27,9 +27,18 @@ const todoRoute = new TodoRoute();
 const userRoute = new UserRoute();
 const groupRoute = new ProjectRoute();
 
+/** ----       TODO: Beyond to remove         ---- **/
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, HEADERS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Accept-Language, Authorization');
+  next();
+});
+/** ----       TODO: Above to remove          ---- **/
+
 app.use("/todos", todoRoute.trail());
 app.use("/users", userRoute.trail());
-app.use("/groups", groupRoute.trail());
+app.use("/projects", groupRoute.trail());
 
 
 // server

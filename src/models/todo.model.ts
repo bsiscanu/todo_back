@@ -7,7 +7,7 @@ const Schema = mongoose.Schema;
  */
 const schema = Schema({
   label: { type: String, required: true, lowercase: true },
-  endData: { type: Date, required: true },
+  endDate: { type: Date, required: true },
   status: { type: Boolean, required: true, default: false }
 });
 

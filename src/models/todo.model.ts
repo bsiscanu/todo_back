@@ -8,7 +8,8 @@ const Schema = mongoose.Schema;
 const schema = Schema({
   label: { type: String, required: true, lowercase: true },
   endDate: { type: Date, required: true },
-  status: { type: Boolean, required: true, default: false }
+  status: { type: Boolean, required: true, default: false },
+  project: { type: Schema.Types.ObjectId, ref: "Project", require: false }
 });
 
 export default mongoose.model("Todo", schema);

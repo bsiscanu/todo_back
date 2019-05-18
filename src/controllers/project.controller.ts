@@ -1,3 +1,4 @@
+import Todo from "../models/todo.model";
 import Project from "../models/project.model";
 import { NextFunction, Request, Response } from "express";
 import Middleware from "../configs/middleware.config";
@@ -16,9 +17,34 @@ export class ProjectController {
   public create(req: Request, res: Response, next: NextFunction): void {
     const project = new Project(req.body);
 
-    project.save()
-      .then(project => res.json(project))
-      .catch(err => next(err));
+    Project.update({ }, { $pull: { todos: { $in: project.todos }}}, { multi: true }, (err: Error) => {
+      if (err) {
+        next(err);
+      } else {
+
+        project.save()
+          .then(project => {
+
+            if (Array.isArray(project.todos) && project.todos.length) {
+              Todo.update({ _id: { $in: project.todos }}, { project: project._id }, { multi: true}, (err: Error) =>{
+                if (err) {
+                  next(err);
+                } else {
+                  res.json(project);
+                }
+              });
+            } else {
+              res.json(project)
+            }
+
+          })
+          .catch((err: Error) => next(err));
+
+      }
+    })
+
+
+
   }
 
   /**
@@ -48,9 +74,32 @@ export class ProjectController {
       req["project"][key] = req.body[key];
     }
 
-    req["project"].save()
-      .then(project => res.json(project))
-      .catch(err => next(err));
+    Project.update({ }, { $pull: { todos: { $in: req["project"].todos }}}, { multi: true }, (err: Error) => {
+      if (err) {
+        next(err);
+      } else {
+        req["project"].save()
+          .then(project => {
+
+            if (Array.isArray(project.todos) && project.todos.length) {
+              Todo.update({ project: project.id }, { $unset: { project: '' }}, { multi: true }, (err: Error) => {
+                if (err) {
+                  next(err);
+                } else {
+                  Todo.update({ _id: { $in: project.todos }}, { project: project._id }, { multi: true }, (err: Error) =>
+                    err ? next(err) : res.json(project)
+                  )
+                }
+              });
+            } else {
+              res.json(project);
+            }
+
+          })
+          .catch((err: Error) => next(err));
+      }
+    })
+
   }
 
   /**
@@ -64,8 +113,21 @@ export class ProjectController {
   @Middleware
   public delete(req: Request, res: Response, next: NextFunction): void {
     req["project"].remove()
-      .then(() => res.json(req["project"]))
-      .catch(err => next(err));
+      .then(() => {
+
+        if (Array.isArray(req["project"].todos) && req["project"].todos.length) {
+          Todo.update({ project: req["project"]._id }, { $unset: { project: '' }}, { multi: true }, (err: Error) => {
+            if (err) {
+              next(err);
+            } else {
+              res.json(req["project"]);
+            }
+          });
+        } else {
+          res.json(req["project"]);
+        }
+      })
+      .catch((err: Error) => next(err));
   }
 
   /**
@@ -81,7 +143,7 @@ export class ProjectController {
     Project.find()
       .populate("todos")
       .then(projects => res.json(projects))
-      .catch(err => next(err));
+      .catch((err: Error) => next(err));
   }
 
   /**
@@ -105,6 +167,6 @@ export class ProjectController {
           next(new Error("Not Found"));
         }
       })
-      .catch(err => next(err));
+      .catch((err: Error) => next(err));
   }
 }

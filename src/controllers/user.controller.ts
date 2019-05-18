@@ -32,10 +32,10 @@ export class UserController {
                 username: user.username,
                 jwt: user.token()
               }))
-              .catch(err => next(err))
+              .catch((err: Error) => next(err))
           }
         })
-        .catch(err => next(err));
+        .catch((err: Error) => next(err));
 
     } else {
       res.status(422).json(req.body);
@@ -70,7 +70,7 @@ export class UserController {
             res.status(401).json(req.body);
           }
         })
-        .catch(err => next(err));
+        .catch((err: Error) => next(err));
     } else {
       res.status(400).json(req.body);
     }
@@ -107,7 +107,7 @@ export class UserController {
               username: user.username,
               jwt: user.token()
             }))
-            .catch(err => next(err));
+            .catch((err: Error) => next(err));
 
         } else {
           res.status(422).json(req.body);

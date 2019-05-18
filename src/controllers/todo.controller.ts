@@ -18,12 +18,27 @@ export class TodoController {
     const todo = new Todo(req.body);
 
     todo.save()
-      .then(todo => res.json(todo))
-      .catch(err => next(err));
+      .then(todo => {
+
+        if (todo.project) {
+          Project.update({ _id: todo.project }, { $addToSet: { todos: todo._id }}, { multi: false }, (err: Error) => {
+            if (err) {
+              next(err)
+            } else{
+              res.json(todo)
+            }
+          });
+        } else {
+          res.json(todo);
+        }
+
+
+      })
+      .catch((err: Error) => next(err));
   }
 
   /**
-   * Returns a todo selected by id
+   * Returns a selected by id
    *
    * @param {Request} req
    * @param {Response} res
@@ -50,8 +65,24 @@ export class TodoController {
     }
 
     req["todo"].save()
-      .then(todo => res.json(todo))
-      .catch(err => next(err));
+      .then(todo => {
+
+        if (todo.project) {
+          Project.update({ }, { $pull: { todos: todo._id }}, { multi: false }, (err: Error) => {
+            if (err) {
+              next(err);
+            } else {
+              Project.update({ _id: todo.project }, { $addToSet: { todos: todo._id }}, { multi: false }, (err: Error) =>
+                err ? next(err) : res.json(todo)
+              );
+            }
+          });
+        } else {
+          res.json(todo);
+        }
+
+      })
+      .catch((err: Error) => next(err));
   }
 
   /**
@@ -65,11 +96,21 @@ export class TodoController {
   @Middleware
   public delete(req: Request, res: Response, next: NextFunction): void {
     req["todo"].remove()
-      .then(() =>
-        Project.update({ }, { $pull: { todos: req["todo"].id } }, { multi: true })
-      )
-      .then(() => res.json(req["todo"]))
-      .catch(err => next(err));
+      .then(() => {
+
+        if (req["todo"].project) {
+          Project.update({ }, { $pull: { todos: req["todo"]._id }}, { multi: false }, (err: Error) => {
+            if (err) {
+              next(err)
+            } else {
+              res.json(req["todo"])
+            }
+          });
+        } else {
+          res.json(req["todo"])
+        }
+      })
+      .catch((err: Error) => next(err));
   }
 
   /**
@@ -83,8 +124,9 @@ export class TodoController {
   @Middleware
   public list(req: Request, res: Response, next: NextFunction): void {
     Todo.find()
+      .populate("project")
       .then(todos => res.json(todos))
-      .catch(err => next(err));
+      .catch((err: Error) => next(err));
   }
 
   /**
@@ -99,6 +141,7 @@ export class TodoController {
   @Middleware
   public todo(req: Request, res: Response, next: NextFunction, id: string): void {
     Todo.findById(id)
+      .populate('project')
       .then(todo => {
         if (todo) {
           req["todo"] = todo;
@@ -107,6 +150,6 @@ export class TodoController {
           next(new Error("Not Found"));
         }
       })
-      .catch(err => next(err));
+      .catch((err: Error) => next(err));
   }
 }

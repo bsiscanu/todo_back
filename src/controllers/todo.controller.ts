@@ -67,12 +67,12 @@ export class TodoController {
     req["todo"].save()
       .then(todo => {
 
-        if (todo.project) {
-          Project.update({ }, { $pull: { todos: todo._id }}, { multi: false }, (err: Error) => {
+        if (req["todo"].project) {
+          Project.update({ },  { $pull: { todos: req["todo"]._id }}, { multi: true }, (err: Error) => {
             if (err) {
               next(err);
             } else {
-              Project.update({ _id: todo.project }, { $addToSet: { todos: todo._id }}, { multi: false }, (err: Error) =>
+              Project.update({ _id: req["todo"].project }, { $addToSet: { todos: req["todo"]._id }}, { multi: false }, (err: Error) =>
                 err ? next(err) : res.json(todo)
               );
             }
@@ -124,7 +124,7 @@ export class TodoController {
   @Middleware
   public list(req: Request, res: Response, next: NextFunction): void {
     Todo.find()
-      .populate("project")
+//      .populate("project")
       .then(todos => res.json(todos))
       .catch((err: Error) => next(err));
   }
@@ -141,7 +141,7 @@ export class TodoController {
   @Middleware
   public todo(req: Request, res: Response, next: NextFunction, id: string): void {
     Todo.findById(id)
-      .populate('project')
+//      .populate('project')
       .then(todo => {
         if (todo) {
           req["todo"] = todo;

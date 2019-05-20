@@ -15,35 +15,21 @@ export class ProjectController {
    */
   @Middleware
   public create(req: Request, res: Response, next: NextFunction): void {
-    const project = new Project(req.body);
 
-    Project.update({ }, { $pull: { todos: { $in: project.todos }}}, { multi: true }, (err: Error) => {
-      if (err) {
-        next(err);
+    Project.create(req.body).then(project => {
+
+      if (project.todos && project.todos.length) {
+        return Project.update({ _id: { $ne: req["project"]._id }}, { $pull: { todos: { $in: req.body["todos"] }}}, { multi: true })
+          .then(() =>
+            Todo.update({ _id: { $in: project.todos }}, { project: project._id }, { multi: true})
+          )
+          .then(() => res.json(project))
       } else {
-
-        project.save()
-          .then(project => {
-
-            if (Array.isArray(project.todos) && project.todos.length) {
-              Todo.update({ _id: { $in: project.todos }}, { project: project._id }, { multi: true}, (err: Error) =>{
-                if (err) {
-                  next(err);
-                } else {
-                  res.json(project);
-                }
-              });
-            } else {
-              res.json(project)
-            }
-
-          })
-          .catch((err: Error) => next(err));
-
+        res.json(project);
       }
+
     })
-
-
+    .catch((err: Error) => next(err));
 
   }
 
@@ -70,35 +56,24 @@ export class ProjectController {
    */
   @Middleware
   public update(req: Request, res: Response, next: NextFunction): void {
+
     for(let key in req.body) {
       req["project"][key] = req.body[key];
     }
 
-    Project.update({ }, { $pull: { todos: { $in: req["project"].todos }}}, { multi: true }, (err: Error) => {
-      if (err) {
-        next(err);
-      } else {
-        req["project"].save()
-          .then(project => {
-
-            if (Array.isArray(project.todos) && project.todos.length) {
-              Todo.update({ project: project.id }, { $unset: { project: '' }}, { multi: true }, (err: Error) => {
-                if (err) {
-                  next(err);
-                } else {
-                  Todo.update({ _id: { $in: project.todos }}, { project: project._id }, { multi: true }, (err: Error) =>
-                    err ? next(err) : res.json(project)
-                  )
-                }
-              });
-            } else {
-              res.json(project);
-            }
-
-          })
-          .catch((err: Error) => next(err));
+    req["project"].save().then(project => {
+      if (req["project"].todos && req["project"].todos.length) {
+        return Promise.all([
+          Project.update({ _id: { $ne: req["project"]._id }}, { $pull: { todos: { $in: req["project"].todos }}}, { multi: true }),
+          Todo.update({ project: req["project"]._id }, { $unset: { project: '' }}, { multi: true })
+        ])
+          .then(() =>
+            Todo.update({ _id: { $in: req["project"].todos }}, { project: req["project"]._id }, { multi: true })
+          )
       }
     })
+      .then(() => res.json(req["project"]))
+      .catch((err: Error) => next(err));
 
   }
 
@@ -112,21 +87,12 @@ export class ProjectController {
    */
   @Middleware
   public delete(req: Request, res: Response, next: NextFunction): void {
-    req["project"].remove()
-      .then(() => {
 
-        if (Array.isArray(req["project"].todos) && req["project"].todos.length) {
-          Todo.update({ project: req["project"]._id }, { $unset: { project: '' }}, { multi: true }, (err: Error) => {
-            if (err) {
-              next(err);
-            } else {
-              res.json(req["project"]);
-            }
-          });
-        } else {
-          res.json(req["project"]);
-        }
-      })
+    Promise.all([
+      req["project"].remove(),
+      Todo.update({ project: req["project"]._id }, { $unset: { project: '' }}, { multi: true })
+    ])
+      .then(() => res.json(req["project"]))
       .catch((err: Error) => next(err));
   }
 

@@ -19,8 +19,9 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 //database
-mongoose.Promise = global.Promise;
-mongoose.connect(process.env.DB, { useMongoClient: true });
+mongoose.set('useNewUrlParser', true);
+mongoose.set('useCreateIndex', true);
+mongoose.connect(process.env.DB);
 
 //routes
 const todoRoute = new TodoRoute();

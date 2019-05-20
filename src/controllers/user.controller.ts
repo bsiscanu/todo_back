@@ -114,4 +114,12 @@ export class UserController {
         }
       })
   }
+
+  @Middleware
+  public list(req: Request, res: Response, next: NextFunction): void {
+    User.find()
+      // .populate("todos")
+      .then(users => res.json(users))
+      .catch((err: Error) => next(err));
+  }
 }

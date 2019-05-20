@@ -1,5 +1,6 @@
 import Todo from "../models/todo.model";
 import Project from "../models/project.model";
+import User from "../models/user.model";
 import Middleware from "../configs/middleware.config";
 import { NextFunction, Request, Response } from "express";
 
@@ -15,26 +16,32 @@ export class TodoController {
    */
   @Middleware
   public create(req: Request, res: Response, next: NextFunction): void {
-    const todo = new Todo(req.body);
 
-    todo.save()
-      .then(todo => {
+    Todo.create(req.body).then(todo => {
 
-        if (todo.project) {
-          Project.update({ _id: todo.project }, { $addToSet: { todos: todo._id }}, { multi: false }, (err: Error) => {
-            if (err) {
-              next(err)
-            } else{
-              res.json(todo)
-            }
-          });
-        } else {
-          res.json(todo);
-        }
+      const promises = [];
 
+      if (todo.project) {
+        promises.push(
+          Project.update({ _id: todo.project }, { $addToSet: { todos: todo._id }}, { multi: false })
+        );
+      }
 
-      })
-      .catch((err: Error) => next(err));
+      if (todo.user) {
+        promises.push(
+          User.update({ _id: todo.user }, { $addToSet: { todos: todo._id }}, { multi: true })
+        );
+      }
+
+      if (promises.length) {
+        return Promise.all(promises) && todo
+      } else {
+        return todo;
+      }
+
+    })
+      .then(todo =>  res.json(todo))
+      .catch(err => next(err));
   }
 
   /**
@@ -60,29 +67,42 @@ export class TodoController {
    */
   @Middleware
   public update(req: Request, res: Response, next: NextFunction): void {
+
     for(let key in req.body) {
       req["todo"][key] = req.body[key];
     }
 
-    req["todo"].save()
-      .then(todo => {
+    req["todo"].save().then(todo => {
+      const promises = [];
 
-        if (req["todo"].project) {
-          Project.update({ },  { $pull: { todos: req["todo"]._id }}, { multi: true }, (err: Error) => {
-            if (err) {
-              next(err);
-            } else {
-              Project.update({ _id: req["todo"].project }, { $addToSet: { todos: req["todo"]._id }}, { multi: false }, (err: Error) =>
-                err ? next(err) : res.json(todo)
-              );
-            }
-          });
-        } else {
-          res.json(todo);
-        }
+      if (req["todo"].user) {
+        promises.push(
+          User.update({ _id: { $ne: req["todo"].user } }, { $pull: { todos: req["todo"]._id }}, { multi: true })
+            .then(() =>
+              User.update({ _id: req["todo"].user }, { $addToSet: { todos: req["todo"]._id } }, { multi: false })
+            )
+        )
+      }
 
-      })
+      if (req["todo"].project) {
+        promises.push(
+          Project.update({ _id: { $ne: req["todo"].project } },  { $pull: { todos: req["todo"]._id }}, { multi: true })
+            .then(() =>
+              Project.update({ _id: req["todo"].project }, { $addToSet: { todos: req["todo"]._id }}, { multi: false })
+            )
+        );
+      }
+
+      if (promises.length) {
+        return Promise.all(promises) && todo;
+      } else {
+        return todo;
+      }
+
+    })
+      .then(todo => res.json(todo))
       .catch((err: Error) => next(err));
+
   }
 
   /**
@@ -95,22 +115,15 @@ export class TodoController {
    */
   @Middleware
   public delete(req: Request, res: Response, next: NextFunction): void {
-    req["todo"].remove()
-      .then(() => {
 
-        if (req["todo"].project) {
-          Project.update({ }, { $pull: { todos: req["todo"]._id }}, { multi: false }, (err: Error) => {
-            if (err) {
-              next(err)
-            } else {
-              res.json(req["todo"])
-            }
-          });
-        } else {
-          res.json(req["todo"])
-        }
-      })
+    Promise.all([
+      req["todo"].remove(),
+      Project.update({ _id: req["todo"].project }, { $pull: { todos: req["todo"]._id }}, { multi: false }),
+      User.update({ _id: req["todo"].user }, { $pull: { todos: req["todo"]._id }}, { multi: false })
+    ])
+      .then(() => res.json(req["todo"]))
       .catch((err: Error) => next(err));
+
   }
 
   /**
@@ -124,7 +137,7 @@ export class TodoController {
   @Middleware
   public list(req: Request, res: Response, next: NextFunction): void {
     Todo.find()
-//      .populate("project")
+      .populate("project")
       .then(todos => res.json(todos))
       .catch((err: Error) => next(err));
   }
@@ -141,7 +154,7 @@ export class TodoController {
   @Middleware
   public todo(req: Request, res: Response, next: NextFunction, id: string): void {
     Todo.findById(id)
-//      .populate('project')
+     .populate('project')
       .then(todo => {
         if (todo) {
           req["todo"] = todo;

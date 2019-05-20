@@ -21,6 +21,7 @@ export class UserRoute {
 
     this.router.post("/register", this.userController.register);
     this.router.post("/login", this.userController.login);
+    this.router.get("/", this.auth, this.userController.list)
     this.router.put("/update", this.auth, this.userController.update);
 
     return this.router;

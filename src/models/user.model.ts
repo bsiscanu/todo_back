@@ -11,7 +11,8 @@ const schema = Schema({
   username: { type: String, required: true, lowercase: true },
   hash: { type: String, required: true },
   salt: { type: String, required: true },
-  lang: { type: String, required: false }
+  lang: { type: String, required: false },
+  todos: [{ type: Schema.Types.ObjectId, ref: "Todo" }]
 });
 
 schema.methods.secure = function(password: string) {
